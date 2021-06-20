@@ -86,10 +86,10 @@ int HowToPlay() {
 
   SetColorA(2,22);
   Say(31,10,"*** HOW TO PLAY ***"); */
-
-    FILE *fp = fopen("howtoplay.txt", "r");
+    const char* filename = "howtoplay.txt";
+    FILE *fp = fopen(filename, "r");
     if (fp == NULL) {
-        printf("Error: could not open file howtoplay.txt");
+        printf("Error: could not open file %s", filename);
         return 1;
     }
     char ch;
@@ -110,9 +110,10 @@ int Story() {
 
   int tec=getch();
   opc=0; */
-    FILE *fp = fopen("bgstory.txt", "r");
+    const char* filename = "bgstory.txt";
+    FILE *fp = fopen(filename, "r");
     if (fp == NULL) {
-        printf("Error: could not open file bgstory.txt");
+        printf("Error: could not open file %s", filename);
         return 1;
     }
     char ch;
