@@ -80,17 +80,16 @@ void Start() {
 
 }
 
-void HowToPlay() {
+int HowToPlay() {
   TextColor(12); /*
   Rectangle(20,8,40,12,"%");
 
   SetColorA(2,22);
   Say(31,10,"*** HOW TO PLAY ***"); */
 
-  char *filename = "howtoplay.txt";
-    FILE *fp = fopen(filename, "r");
+    FILE *fp = fopen("howtoplay.txt", "r");
     if (fp == NULL) {
-        printf("Error: could not open file %s", filename);
+        printf("Error: could not open file howtoplay.txt");
         return 1;
     }
     char ch;
@@ -111,10 +110,9 @@ int Story() {
 
   int tec=getch();
   opc=0; */
-    char *filename = "bgstory.txt";
-    FILE *fp = fopen(filename, "r");
+    FILE *fp = fopen("bgstory.txt", "r");
     if (fp == NULL) {
-        printf("Error: could not open file %s", filename);
+        printf("Error: could not open file bgstory.txt");
         return 1;
     }
     char ch;
