@@ -25,7 +25,13 @@ int Rotate(int px, int py, int r);
 bool DoesPieceFit(int nTetromino, int nRotation, int nPosX, int nPosY);
 
 int main() {
+
+	//Console screen resize
+	HWND hwnd = GetConsoleWindow();
+    if( hwnd != NULL ){ MoveWindow(hwnd ,100,100,680,600 ,TRUE); }
+	
 	// Create Screen Buffer
+
 	wchar_t *screen = new wchar_t[nScreenWidth*nScreenHeight];
 	for (int i = 0; i < nScreenWidth*nScreenHeight; i++) screen[i] = L' ';
 	HANDLE hConsole = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE, 0, NULL, CONSOLE_TEXTMODE_BUFFER, NULL);
