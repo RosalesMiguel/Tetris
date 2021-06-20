@@ -1,0 +1,31 @@
+GAME RULES
+
+Prison Tetris is played on a grid called the Playfield. 
+
+Tetrimino shapes drop one-by-one from the top of the Playfield to the bottom. With each level, the speed at which the Tetriminos drop increases. 
+
+Before a Tetrimino reaches the bottom of the Playfield, you can move and rotate this shape to fit your desired position and avoid crushing the prisoner. 
+
+Keep in mind that you are also in control of the prisoner’s movements.
+
+With each line cleared, you score 100 points.  
+
+To avoid misplacing Tetriminos and increasing your line height, “hold” a Tetrimino if you don’t have a good spot for the time being. 
+However, you can only hold one Tetrimino at a time. 
+
+Secret to Victory? 
+    1.	Keep the prisoner alive within the 2-minute time limit. This means that no Tetriminos must fall directly on the prisoner. 
+    2.	The Tetriminos must never reach the top of the Playfield. 
+
+
+CONTROLS
+
+Move Tetrimino Left                 <-
+Move Tetrimino Right                ->
+Rotate Tetrimino Clockwise         (UP) 
+Soft Drop a Tetrimino             (DOWN) 
+Hard Drop a Tetrimino            Space Bar 
+Hold Piece                         Shift 
+Move Prisoner Left                  A
+Move Prisoner Right                 D 
+Make Prisoner Jump                  W 
