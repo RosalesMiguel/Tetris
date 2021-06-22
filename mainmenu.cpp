@@ -136,15 +136,15 @@ struct player{
     char name[16];
     int score;
     int lvl;
-}plyr, read, temp;
+}plyr, rd, temp;
 
 int Existing;
 
 int playerExists(){
     FILE *fp = fopen("names.txt", "r");
     if(!fp) return 0;
-    while(fread(read.name, sizeof(char)*16, 1, fp) && !feof(fp)){
-        if(!strcmp(read.name, plyr.name)){
+    while(fread(rd.name, sizeof(char)*16, 1, fp) && !feof(fp)){
+        if(!strcmp(rd.name, plyr.name)){
             fclose(fp);
             return 1;
         }
@@ -166,11 +166,11 @@ void initFile(){
         cout << "An error occurred" << endl;
         return;
     }
-    read.score = -1;
-    strcpy(read.name, "--");
+    rd.score = -1;
+    strcpy(rd.name, "--");
     for(int i = 1; i <= 16; i++){
-        read.lvl = i;
-        for(int j = 1; j <= 10; j++) fwrite(&read, sizeof(player), 1, fp);
+        rd.lvl = i;
+        for(int j = 1; j <= 10; j++) fwrite(&rd, sizeof(player), 1, fp);
     }
     fclose(fp);
 }
@@ -200,8 +200,8 @@ int topScore(){
     }
     fseek(fp, sizeof(player)*((plyr.lvl - 1)*10), SEEK_SET);
     for(int i = 1; i <= 10; i++){
-        fread(&read, sizeof(player), 1, fp);
-        if(plyr.score >= read.score && plyr.score != 0) return i;
+        fread(&rd, sizeof(player), 1, fp);
+        if(plyr.score >= rd.score && plyr.score != 0) return i;
     }
     fclose(fp);
     return 0;
@@ -218,15 +218,15 @@ void writeScore(){
         cout << "New high score!" << endl;
         for(int j = i; j <= 10; j++){
             fseek(fp, sizeof(player)*((plyr.lvl - 1)*10 + j - 1), SEEK_SET);
-            fread(&read, sizeof(player), 1, fp);
+            fread(&rd, sizeof(player), 1, fp);
             fseek(fp, sizeof(player)*((plyr.lvl - 1)*10 + j - 1), SEEK_SET);
             if(j == i) fwrite(&plyr, sizeof(player), 1, fp);
             else fwrite(&temp, sizeof(player), 1, fp);
-            if(read.score == -1){
+            if(rd.score == -1){
                 fclose(fp);
                 return;
             }
-            temp = read;
+            temp = rd;
         }
     }
 }
@@ -240,15 +240,15 @@ void displayTopScores(int lvl){
     cout << "\n>>>>>>>>>> Level " << lvl << " <<<<<<<<<<<" << endl;
     cout << "\n>> Player >>>>>>>>>>>> Score <<" << endl;
     fseek(fp, sizeof(player)*((lvl - 1)*10), SEEK_SET);
-    fread(&read, sizeof(player), 1, fp);
+    fread(&rd, sizeof(player), 1, fp);
     for(int i = 0; i < 10; i++){
-        if(read.score == -1 || read.score == 0){
+        if(rd.score == -1 || rd.score == 0){
             fclose(fp);
             cout << "\n>>>>>>>>> End of List <<<<<<<<<" << endl;
             return;
         }
-        cout << endl << read.name << "                       " << read.score << endl;
-        fread(&read, sizeof(player), 1, fp);
+        cout << endl << rd.name << "                       " << rd.score << endl;
+        fread(&rd, sizeof(player), 1, fp);
         i++;
     };
 }
