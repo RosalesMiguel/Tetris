@@ -297,6 +297,8 @@ int main(){
                 system("cls");
                 char buffer[500];
                 initPlayer();
+                system("start main.exe");
+	            system("pause");
                 //Sample
                 cout << "score: ";
                 cin >> plyr.score;
