@@ -96,7 +96,6 @@ int hardDrop(int nTetromino, int nRotation, int nPosX, int nPosY){
 
 int main()
 {
-	system("Color EC");
 	//Screem resize
 	HWND hwnd = GetConsoleWindow();
     if( hwnd != NULL ){ MoveWindow(hwnd ,100,100,680,600 ,TRUE); }
