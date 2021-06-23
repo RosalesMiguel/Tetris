@@ -22,6 +22,13 @@ int subcolor = 14; //yellow
 void changeColor(int desiredColor){ 
      SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), desiredColor);
 }
+void hideCursor(){
+    HANDLE myconsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	CONSOLE_CURSOR_INFO CURSOR;
+	CURSOR.dwSize = 1;
+	CURSOR.bVisible = FALSE;
+	SetConsoleCursorInfo(myconsole, &CURSOR);
+}
 // in case needed
 /*void Draw(){
     cout << "PRISONER TETRIS" << endl;
@@ -254,10 +261,12 @@ void displayTopScores(int lvl){
 }
 
 int main(){
+    hideCursor();
     int choice = 1;
     int ch, lvl;
     chooseStart();
     while ((ch = getch()) != ESC){
+        hideCursor();
         if(ch == 72){
                 choice--;
                 if (choice == 0) choice = 1;
