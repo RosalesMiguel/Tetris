@@ -1,266 +1,264 @@
 #ifndef UNICODE
 #define UNICODE
-#endif //UNICODE
+#endif
 #ifndef _UNICODE
 #define _UNICODE
-#endif // _UNICODE
+#endif
 
 #include <iostream>
 #include <thread>
 #include <vector>
-using namespace std;
-
 #include <stdio.h>
 #include <Windows.h>
+#include <chrono>
+#include <unistd.h>
 
-int nScreenWidth = 80;
-int nScreenHeight = 30;			// Console Screen Size Y (rows)
+using namespace std;
+
+struct rect{
+    int l, w, area;
+}screen, field;
+
+struct obj{
+    int shape, rotation, x, y;
+}piece, prisoner;
+
 wstring tetromino[7];
-int nFieldWidth = 12;
-int nFieldHeight = 18;
 unsigned char *pField = nullptr;
-wchar_t *screen = new wchar_t[nScreenWidth*nScreenHeight];
+wchar_t *display;
+bool endGame;
+int ghost;
 
-int Rotate(int px, int py, int r)
-{
+int Rotate(int px, int py, int r){
 	int pi = 0;
-	switch (r % 4)
-	{
-	case 0: // 0 degrees			// 0  1  2  3
-		pi = py * 4 + px;			// 4  5  6  7
-		break;						// 8  9 10 11
-									//12 13 14 15
-
-	case 1: // 90 degrees			//12  8  4  0
-		pi = 12 + py - (px * 4);	//13  9  5  1
-		break;						//14 10  6  2
-									//15 11  7  3
-
-	case 2: // 180 degrees			//15 14 13 12
-		pi = 15 - (py * 4) - px;	//11 10  9  8
-		break;						// 7  6  5  4
-									// 3  2  1  0
-
-	case 3: // 270 degrees			// 3  7 11 15
-		pi = 3 - py + (px * 4);		// 2  6 10 14
-		break;						// 1  5  9 13
-	}								// 0  4  8 12
-
+	switch (r % 4){
+        case 0: //0 degrees
+            pi = py * 4 + px;
+            break;
+        case 1: //90 degrees
+            pi = 12 + py - (px * 4);
+            break;
+        case 2: //180 degrees
+            pi = 15 - (py * 4) - px;
+            break;
+        case 3: //270 degrees
+            pi = 3 - py + (px * 4);
+            break;
+	}
 	return pi;
 }
 
-bool DoesPieceFit(int nTetromino, int nRotation, int nPosX, int nPosY)
-{
-	// All Field cells >0 are occupied
-	for (int px = 0; px < 4; px++)
-		for (int py = 0; py < 4; py++)
-		{
-			// Get index into piece
-			int pi = Rotate(px, py, nRotation);
-
-			// Get index into field
-			int fi = (nPosY + py) * nFieldWidth + (nPosX + px);
-
-			// Check that test is in bounds. Note out of bounds does
-			// not necessarily mean a fail, as the long vertical piece
-			// can have cells that lie outside the boundary, so we'll
-			// just ignore them
-			if (nPosX + px >= 0 && nPosX + px < nFieldWidth)
-			{
-				if (nPosY + py >= 0 && nPosY + py < nFieldHeight)
-				{
-					// In Bounds so do collision check
-					if (tetromino[nTetromino][pi] != L'.' && pField[fi] != 0)
-						return false; // fail on first hit
+bool DoesPieceFit(int i, int j, int k){
+    int pi, fi;
+	for (int px = 0; px < 4; px++){
+		for (int py = 0; py < 4; py++){
+			pi = Rotate(px, py, piece.rotation + i);
+            fi = (piece.y + k + py) * field.w + (piece.x+ j + px);
+			if (piece.x + j + px >= 0 && piece.x + j + px < field.w){
+				if (piece.y + k + py >= 0 && piece.y + k + py < field.l){
+					if (tetromino[piece.shape][pi] != L'.' && pField[fi] != 0) return false; //block collides with a surface
 				}
 			}
 		}
-
-	return true;
-}
-
-bool DoesPrisonerFit(int nPosX, int nPosY){
-     int fi = (nPosY*nFieldWidth) + nPosX;
-     if (pField[fi] != 0) return false; // fail on first hit
-	return true;
-}
-
-int hardDrop(int nTetromino, int nRotation, int nPosX, int nPosY){
-    int i;
-    while(DoesPieceFit(nTetromino, nRotation, nPosX, nPosY)){
-        i++;
-        nPosY++;
     }
-    return i;
+	return true;
 }
 
-int main()
-{
-	//Screem resize
+bool DoesPrisonerFit(int i, int j){
+    int fi = ((prisoner.y + j)*field.w) + prisoner.x + i;
+    if (pField[fi] != 0) return false;
+    return true;
+}
+
+bool DoesPieceHitPrisoner(){
+    int pi, fi_1, fi_2;
+	for (int px = 0; px < 4; px++){
+		for (int py = 0; py < 4; py++){
+			pi = Rotate(px, py, piece.rotation);
+            fi_1 = (piece.y + py)*field.w + (piece.x + px);
+            fi_2 = prisoner.y*field.w + prisoner.x;
+			if (piece.x + px >= 0 && piece.x + px < field.w){
+				if (piece.y + py >= 0 && piece.y + py < field.l){
+					if (tetromino[piece.shape][pi] != L'.' && fi_1 == fi_2) return true; //block hits prisoner
+				}
+			}
+		}
+    }
+	return false;
+}
+
+void hardDrop(){
+    while(DoesPieceFit(0, 0, 1)){
+        piece.y++;
+        endGame = DoesPieceHitPrisoner();
+        if(endGame) return;
+    }
+}
+
+bool DoesGhostFit(int i, int j, int k){
+    int pi, fi;
+	for (int px = 0; px < 4; px++){
+		for (int py = 0; py < 4; py++){
+			pi = Rotate(px, py, piece.rotation + i);
+            fi = (ghost + k + py)*field.w + (piece.x+ j + px);
+			if (piece.x + j + px >= 0 && piece.x + j + px < field.w){
+				if (ghost + k + py >= 0 && ghost + k + py < field.l){
+					if (tetromino[piece.shape][pi] != L'.' && pField[fi] != 0) return false; //block collides with a surface
+				}
+			}
+		}
+    }
+	return true;
+}
+
+void ghostDrop(){
+    while(DoesGhostFit(0, 0, 1)) ghost++;
+}
+int main(){
+	//Screen resize
 	HWND hwnd = GetConsoleWindow();
-    if( hwnd != NULL ){ MoveWindow(hwnd ,100,100,680,600 ,TRUE); }
+    if(hwnd != NULL) MoveWindow(hwnd ,100,100,680,600 ,TRUE);
+    auto start = chrono::steady_clock::now();
+    screen.w = 80;
+    screen.l = 30;
+    screen.area = screen.l*screen.w;
+    display = new wchar_t[screen.area];
+    field.w = 12;
+    field.l = 18;
+    field.area = field.l*field.w;
 
 	// Create Screen Buffer
-	for (int i = 0; i < nScreenWidth*nScreenHeight; i++) screen[i] = L' ';
+	for (int i = 0; i < screen.area; i++) display[i] = L' ';
 	HANDLE hConsole = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE, 0, NULL, CONSOLE_TEXTMODE_BUFFER, NULL);
 	SetConsoleActiveScreenBuffer(hConsole);
 	DWORD dwBytesWritten = 0;
 
-	tetromino[0].append(L"..X...X...X...X."); // Tetronimos 4x4
-	tetromino[1].append(L"..X..XX...X.....");
-	tetromino[2].append(L".....XX..XX.....");
-	tetromino[3].append(L"..X..XX..X......");
-	tetromino[4].append(L".X...XX...X.....");
-	tetromino[5].append(L".X...X...XX.....");
-	tetromino[6].append(L"..X...X..XX.....");
+	tetromino[0].append(L"..X...X...X...X.");   //I
+	tetromino[1].append(L"..X..XX...X.....");   //T
+	tetromino[2].append(L".....XX..XX.....");   //O
+	tetromino[3].append(L"..X..XX..X......");   //Z
+	tetromino[4].append(L".X...XX...X.....");   //S
+	tetromino[5].append(L".X...X...XX.....");   //L
+	tetromino[6].append(L"..X...X..XX.....");   //J
 
-	pField = new unsigned char[nFieldWidth*nFieldHeight]; // Create play field buffer
-	for (int x = 0; x < nFieldWidth; x++) // Board Boundary
-		for (int y = 0; y < nFieldHeight; y++)
-			pField[y*nFieldWidth + x] = (x == 0 || x == nFieldWidth - 1 || y == nFieldHeight - 1) ? 9 : 0;
+	pField = new unsigned char[field.area]; // Create play field buffer
+	for (int x = 0; x < field.w; x++) // Board Boundary
+		for (int y = 0; y < field.l; y++)
+			pField[y*field.w + x] = (x == 0 || x == field.w - 1 || y == field.l - 1) ? 9 : 0;
 
-	// Game Logic
-	bool bKey[8];
-	int nCurrentPiece = 0;
-	int nCurrentRotation = 0;
-	int nCurrentX = nFieldWidth / 2;
-	int nCurrentY = 0;
-	int nSpeed = 20;
-	int nSpeedCount = 0;
-    int pCurrentX = nFieldWidth / 2;
-    int pCurrentY = nFieldHeight;
-	bool bForceDown = false;
-	bool bRotateHold = true;
-	int nPieceCount = 0;
-	int nScore = 0;
+	piece.shape = 0;
+	piece.rotation = 0;
+	piece.x = field.w / 2;
+	piece.y = 0;
+	prisoner.x = field.w / 2;
+    prisoner.y = field.l - 2;
+	int nSpeed = 20, nSpeedCount = 0, nPieceCount = 0, nScore = 0;
+	bool bForceDown = false, bRotateHold = true, line, key[9];
 	vector<int> vLines;
-	bool bGameOver = false;
+    endGame = false;
 
-	while (!bGameOver) // Main Loop
-	{
-		// Timing =======================
-		this_thread::sleep_for(50ms); // Small Step = 1 Game Tick
+	while (!endGame){
+        this_thread::sleep_for(50ms);
 		nSpeedCount++;
 		bForceDown = (nSpeedCount == nSpeed);
 
-		// Input ========================
-		for (int k = 0; k < 8; k++)								// R   L   D U spacebar A D W
-			bKey[k] = (0x8000 & GetAsyncKeyState((unsigned char)("\x27\x25\x28\x26\x20\x41\x44\x57"[k]))) != 0;
+		//Player input
+		for (int k = 0; k < 9; k++)								// R   L   D U spacebar A D   W   S
+			key[k] = (0x8000 & GetAsyncKeyState((unsigned char)("\x27\x25\x28\x26\x20\x41\x44\x57\x53"[k]))) != 0;
 
-		// Game Logic ===================
-
-		// Handle player movement
-		nCurrentX += (bKey[0] && DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX + 1, nCurrentY)) ? 1 : 0;
-		nCurrentX -= (bKey[1] && DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX - 1, nCurrentY)) ? 1 : 0;
-		nCurrentY += (bKey[2] && DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX, nCurrentY + 1)) ? 1 : 0;
-		nCurrentY += bKey[4] ? hardDrop(nCurrentPiece, nCurrentRotation, nCurrentX, nCurrentY + 1): 0;
-		pCurrentX += (bKey[6] && DoesPrisonerFit(pCurrentX + 1, pCurrentY)) ? 1 : 0;
-        pCurrentX -= (bKey[5] && DoesPrisonerFit(pCurrentX - 1, pCurrentY)) ? 1 : 0;
-		pCurrentY -= (bKey[7]) ? 1 : 0;
-
-		// Rotate, but latch to stop wild spinning
-		if (bKey[3])
-		{
-			nCurrentRotation += (bRotateHold && DoesPieceFit(nCurrentPiece, nCurrentRotation + 1, nCurrentX, nCurrentY)) ? 1 : 0;
+        endGame = DoesPieceHitPrisoner();
+		piece.x += (key[0] && DoesPieceFit(0, 1, 0)) ? 1 : 0;
+		piece.x -= (key[1] && DoesPieceFit(0, -1, 0)) ? 1 : 0;
+		piece.y += (key[2] && DoesPieceFit(0, 0, 1)) ? 1 : 0;
+		if(key[4]) hardDrop();
+		ghost = piece.y;
+		ghostDrop();
+		prisoner.x += (key[6] && DoesPrisonerFit(1, 0)) ? 1 : 0;
+        prisoner.x -= (key[5] && DoesPrisonerFit(- 1, 0)) ? 1 : 0;
+		prisoner.y -= (key[7] && DoesPrisonerFit(0, -1))? 1 : 0;
+		prisoner.y += (key[8] && DoesPrisonerFit(0, 1)) ? 1 : 0;
+		if (key[3]){
+			piece.rotation += (bRotateHold && DoesPieceFit(1, 0, 0))? 1 : 0;
 			bRotateHold = false;
 		}
-		else
-			bRotateHold = true;
+		else bRotateHold = true;
 
-		// Force the piece down the playfield if it's time
-		if (bForceDown)
-		{
-			// Update difficulty every 50 pieces
+		if (bForceDown){
 			nSpeedCount = 0;
 			nPieceCount++;
-			if (nPieceCount % 50 == 0)
-				if (nSpeed >= 10) nSpeed--;
-
-			// Test if piece can be moved down
-			if (DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX, nCurrentY + 1))
-				nCurrentY++; // It can, so do it!
-			else
-			{
-				// It can't! Lock the piece in place
+			if (DoesPieceFit(0, 0, 1)) piece.y++; //Drop piece by one unit until it collides with a surface
+			else{
+                //Record piece once it collides with a surface
 				for (int px = 0; px < 4; px++)
 					for (int py = 0; py < 4; py++)
-						if (tetromino[nCurrentPiece][Rotate(px, py, nCurrentRotation)] != L'.')
-							pField[(nCurrentY + py) * nFieldWidth + (nCurrentX + px)] = nCurrentPiece + 1;
-
+						if (tetromino[piece.shape][Rotate(px, py, piece.rotation)] != L'.')
+							pField[(piece.y + py) * field.w + (piece.x + px)] = piece.shape + 1;
 				// Check for lines
 				for (int py = 0; py < 4; py++)
-					if(nCurrentY + py < nFieldHeight - 1)
-					{
-						bool bLine = true;
-						for (int px = 1; px < nFieldWidth - 1; px++)
-							bLine &= (pField[(nCurrentY + py) * nFieldWidth + px]) != 0;
-
-						if (bLine)
-						{
-							// Remove Line, set to =
-							for (int px = 1; px < nFieldWidth - 1; px++)
-								pField[(nCurrentY + py) * nFieldWidth + px] = 8;
-							vLines.push_back(nCurrentY + py);
+					if(piece.y + py < field.l - 1){
+						line = true;
+						for (int px = 1; px < field.w- 1; px++) line &= (pField[(piece.y + py) * field.w + px]) != 0;
+						if(line){
+							//remove formed line
+							for (int px = 1; px < field.w - 1; px++) pField[(piece.y + py) * field.w + px] = 8;
+							vLines.push_back(piece.y + py);
 						}
 					}
+                nScore += 0;
+				if(!vLines.empty())	nScore += (1 << vLines.size()) * 50; //Add 100 points for every cleared line
 
-				nScore += 0;
-				if(!vLines.empty())	nScore += (1 << vLines.size()) * 100;       // Increments score by 100 if a line is cleared
+				//Create new piece
+				piece.x = field.w / 2;
+				piece.y = 0;
+				piece.rotation = 0;
+				piece.shape = rand() % 7;
 
-				// Pick New Piece
-				nCurrentX = nFieldWidth / 2;
-				nCurrentY = 0;
-				nCurrentRotation = 0;
-				nCurrentPiece = rand() % 7;
-
-				// If piece does not fit straight away, game over!
-				bGameOver = !DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX, nCurrentY);
+				//If piece cannot fit, game over!
+				endGame = !DoesPieceFit(0, 0, 0);
 			}
 		}
+		//Draw field
+		for (int x = 0; x < field.w; x++)
+			for (int y = 0; y < field.l; y++)
+				display[(y + 2)*screen.w + (x + 2)] = L" ABCDEFG=#"[pField[y*field.w + x]];
+		//Draw piece
+		for (int px = 0; px < 4; px++){
+			for (int py = 0; py < 4; py++){
+				if (tetromino[piece.shape][Rotate(px, py, piece.rotation)] != L'.'){
+                    display[(ghost + py + 2)*screen.w + (piece.x + px + 2)] = 79;
+					display[(piece.y + py + 2)*screen.w + (piece.x + px + 2)] = piece.shape + 65;
+				}
+			}
+		}
+        //Draw prisoner
+        display[(prisoner.y + 2)*screen.w + (prisoner.x + 2)] = 80;
+		// Draw score
+		swprintf_s(&display[2 * screen.w + field.w + 6], 16, L"SCORE: %8d", nScore);
+        //Draw timer
+        auto end = chrono::steady_clock::now();
+        if(chrono::duration_cast<chrono::seconds>(end - start).count() == 120) endGame = true;
+        swprintf_s(&display[5 * screen.w + field.w + 6], 16, L" TIME LEFT: %d s", 120 - chrono::duration_cast<chrono::seconds>(end - start).count());
 
-		// Display ======================
-
-		// Draw Field
-		for (int x = 0; x < nFieldWidth; x++)
-			for (int y = 0; y < nFieldHeight; y++)
-				screen[(y + 2)*nScreenWidth + (x + 2)] = L" ABCDEFG=#"[pField[y*nFieldWidth + x]];
-
-		// Draw Current Piece
-		for (int px = 0; px < 4; px++)
-			for (int py = 0; py < 4; py++)
-				if (tetromino[nCurrentPiece][Rotate(px, py, nCurrentRotation)] != L'.')
-					screen[(nCurrentY + py + 2)*nScreenWidth + (nCurrentX + px + 2)] = nCurrentPiece + 65;
-        //Draw Prisoner
-
-        screen[(pCurrentY)*nScreenWidth + (pCurrentX + 2)] = 80;
-		// Draw Score
-		swprintf_s(&screen[2 * nScreenWidth + nFieldWidth + 6], 16, L"SCORE: %8d", nScore);
-
-		// Animate Line Completion
-		if (!vLines.empty())
-		{
-			// Display Frame (cheekily to draw lines)
-			WriteConsoleOutputCharacter(hConsole, screen, nScreenWidth * nScreenHeight, { 0,0 }, &dwBytesWritten);
+		if (!vLines.empty()){
+			WriteConsoleOutputCharacter(hConsole, display, screen.area, { 0,0 }, &dwBytesWritten);
 			this_thread::sleep_for(400ms); // Delay a bit
 
 			for (auto &v : vLines)
-				for (int px = 1; px < nFieldWidth - 1; px++)
+				for (int px = 1; px < field.w - 1; px++)
 				{
 					for (int py = v; py > 0; py--)
-						pField[py * nFieldWidth + px] = pField[(py - 1) * nFieldWidth + px];
+						pField[py * field.w + px] = pField[(py - 1) * field.w + px];
 					pField[px] = 0;
 				}
 
 			vLines.clear();
 		}
-
-		// Display Frame
-		WriteConsoleOutputCharacter(hConsole, screen, nScreenWidth * nScreenHeight, { 0,0 }, &dwBytesWritten);
+		WriteConsoleOutputCharacter(hConsole, display, screen.area, { 0,0 }, &dwBytesWritten);
 	}
 
 	// Oh Dear
 	CloseHandle(hConsole);
-	cout << "Game Over!! Score:" << nScore << endl;
+	cout << "Uh oh, game over! You garnered a total of " << nScore << " points!" << endl;
 	system("pause");
 	return 0;
 }
